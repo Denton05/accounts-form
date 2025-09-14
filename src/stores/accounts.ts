@@ -41,15 +41,15 @@ export function validateDraft(draft: AccountDraft): DraftErrors {
         errors.type = 'Укажите тип';
 
     if (!draft.login.trim())
-        errors.login = 'Логин обязателен'
+        errors.login = 'Введите логин'
     else if (draft.login.trim().length > 100)
-        errors.login = 'Логин не более 100 символов'
+        errors.login = 'Максимум 100 символов'
 
     if (draft.type === 'LOCAL') {
         if (!draft.password.trim())
-            errors.password = 'Пароль обязателен'
+            errors.password = 'Введите пароль'
         else if (draft.password.trim().length > 100)
-            errors.password = 'Пароль не более 100 символов';
+            errors.password = 'Максимум 100 символов';
     }
 
     return errors;

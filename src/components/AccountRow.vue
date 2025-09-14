@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useAccountsStore } from '../stores/accounts';
+import { validateDraft } from '../stores/accounts';
 import type { AccountType } from '../stores/accounts';
 
 const props = defineProps<{id: string}>();
@@ -9,16 +10,27 @@ const store = useAccountsStore();
 const draft = computed(() => store.getDraftById(props.id));
 const errors = computed(() => store.draftErrors[props.id] || {});
 
-function onBlur() {
+function trySave() {
     if (!draft.value)
         return;
+
+    const validationErrors = validateDraft(draft.value);
+
+    if (Object.keys(validationErrors).length) {
+        store.draftErrors[props.id] = validationErrors;
+        return
+    }
 
     store.saveFromDraft(props.id);
 }
 
+function onBlur() {
+    trySave();
+}
+
 function onTypeChange(val: AccountType | null) {
     store.patchDraft(props.id, 'type', val);
-    store.saveFromDraft(props.id);
+    trySave();
 }
 </script>
 
