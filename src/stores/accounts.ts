@@ -69,33 +69,57 @@ export const useAccountsStore = defineStore('accounts', {
     state: () => ({
         items: [] as Account[],
         drafts: [] as AccountDraft[],
-        draftErrors: {} as Record<string, DraftErrors>
+        draftErrors: {} as Record<string, DraftErrors>,
+        draftSnapshots: {} as Record<string, string>
     }),
     getters: {
         getItemById: (state) => (id: string) => state.items.find(i => i.id === id),
         getDraftById: (state) => (id: string) => state.drafts.find(d => d.id === id)
     },
     actions: {
+        _serializeDraft(draft: AccountDraft) {
+            return JSON.stringify({
+                labelsInput: draft.labelsInput.trim(),
+                type: draft.type,
+                login: draft.login.trim(),
+                password: draft.type === 'LOCAL' ? draft.password.trim() : ''
+            });
+        },
+        isDraftDirty(id: string) {
+            const draft = this.getDraftById(id);
+            
+            if (!draft)
+                return false;
+            
+            return this._serializeDraft(draft) !== this.draftSnapshots[id];
+        },
         addDraft() {
             const id = nanoid();
-            this.drafts.push({
+            const draft: AccountDraft = {
                 id,
                 labelsInput: '',
                 type: null,
                 login: '',
                 password: ''
-            });
+            };
+            this.drafts.push(draft);
+            this.draftSnapshots[id] = this._serializeDraft(draft);
             return id;
         },
         remove(id: string) {
             this.items = this.items.filter(i => i.id !== id);
             this.drafts = this.drafts.filter(d => d.id !== id);
             delete this.draftErrors[id];
+            delete this.draftSnapshots[id];
         },
         saveFromDraft(id: string): SaveResult {
             const draft = this.getDraftById(id);
+            
             if (!draft)
                 return { ok: false, errors: {}};
+
+            if(!this.isDraftDirty(id))
+                return { ok: true };
             
             const errors = validateDraft(draft);
             if (Object.keys(errors).length)
@@ -117,6 +141,7 @@ export const useAccountsStore = defineStore('accounts', {
                 this.items.push(account);
 
             this.drafts = this.drafts.filter(x => x.id !== id);
+            delete this.draftSnapshots[id];
             return { ok: true };
         },
         patchDraft<T extends keyof AccountDraft>(id: string, key: T, value: AccountDraft[T]) {
@@ -141,21 +166,23 @@ export const useAccountsStore = defineStore('accounts', {
             if(!account)
                 return;
 
-            const existing = this.getDraftById(id);
-            if(existing)
+            if(this.getDraftById(id))
                 return;
 
-            this.drafts.push({
+            const draft: AccountDraft = {
                 id: account.id,
                 labelsInput: account.labels.map(x => x.text).join('; '),
                 type: account.type,
                 login: account.login,
                 password: account.type === 'LOCAL' ? (account.password ?? '') : '',
-            });
+            }
+
+            this.drafts.push(draft);
+            this.draftSnapshots[id] = this._serializeDraft(draft);
         },
     },
     persist: {
         enabled: true,
-        strategies: [{ paths: ['items']} ]
+        strategies: [{ paths: ['items'] }]
     },
 });
