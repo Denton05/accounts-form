@@ -68,7 +68,8 @@ export function toAccount(draft: AccountDraft): Account {
 export const useAccountsStore = defineStore('accounts', {
     state: () => ({
         items: [] as Account[],
-        drafts: [] as AccountDraft[]
+        drafts: [] as AccountDraft[],
+        draftErrors: {} as Record<string, DraftErrors>
     }),
     getters: {
         getItemById: (state) => (id: string) => state.items.find(i => i.id === id),
@@ -89,6 +90,7 @@ export const useAccountsStore = defineStore('accounts', {
         remove(id: string) {
             this.items = this.items.filter(i => i.id !== id);
             this.drafts = this.drafts.filter(d => d.id !== id);
+            delete this.draftErrors[id];
         },
         saveFromDraft(id: string): SaveResult {
             const draft = this.getDraftById(id);
@@ -97,7 +99,12 @@ export const useAccountsStore = defineStore('accounts', {
             
             const errors = validateDraft(draft);
             if (Object.keys(errors).length)
+            {
+                this.draftErrors[id] = errors;
                 return { ok: false, errors }
+            }
+
+            delete this.draftErrors[id];
 
             if (draft.type === 'LDAP')
                 draft.password = '';
@@ -119,7 +126,7 @@ export const useAccountsStore = defineStore('accounts', {
                 return;
 
             if (key === 'type') {
-                draft.type = value as AccountType;
+                draft.type = value as AccountType | null;
 
                 if(draft.type === 'LDAP')
                     draft.password = '';
