@@ -62,10 +62,8 @@ button:focus-visible {
   padding: 0;
 }
 
-.header-row{
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.mb12 { 
+    margin-bottom: 12px; 
 }
 
 #app {
